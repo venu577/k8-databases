@@ -25,7 +25,7 @@ metadata:
 type: Opaque
 data:
   AMQP_USER: "cm9ib3Nob3A="
-  AMQP_PASS: "cm9ib3Nob3AxMjM="  
+  AMQP_PASS: "cm9ib3Nob3AxMjM="
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -56,11 +56,18 @@ spec:
       containers:
       - name: payment
         image: venuuu/payment:v1
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          limits:
+            cpu: "100m"
+            memory: "256Mi"
         envFrom:
         - configMapRef:
             name: payment
         - secretRef:
-            name: payment    
+            name: payment
 ---
 apiVersion: v1
 kind: Service
@@ -80,3 +87,24 @@ spec:
   - protocol: TCP
     port: 8080 # service port
     targetPort: 8080 # container port
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment
+  namespace: roboshop
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 10
+      
