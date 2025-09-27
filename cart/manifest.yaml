@@ -8,9 +8,9 @@ metadata:
     project: roboshop
     tier: app
 data:
-  REDIS_HOST: "redis" 
+  REDIS_HOST: "redis"
   CATALOGUE_HOST: "catalogue"
-  CATALOGUE_PORT: "8080" 
+  CATALOGUE_PORT: "8080"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -21,7 +21,7 @@ metadata:
   labels:
     component: cart
     project: roboshop
-    tier: app  
+    tier: app
 spec:
   replicas: 1
   # These are the labels replica set use to create pod replicas, this should match pod labels
@@ -29,8 +29,8 @@ spec:
     matchLabels:
       component: cart
       project: roboshop
-      tier: app 
-  # This is pod definition       
+      tier: app
+  # This is pod definition
   template:
     metadata:
       labels:
@@ -41,10 +41,16 @@ spec:
       containers:
       - name: cart
         image: venuuu/cart:v1
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          limits:
+            cpu: "100m"
+            memory: "256Mi"
         envFrom:
         - configMapRef:
-            name: cart  
-
+            name: cart
 ---
 apiVersion: v1
 kind: Service
@@ -62,10 +68,25 @@ spec:
     tier: app
   ports:
   - protocol: TCP
-    port: 8080 #container port
-    targetPort: 8080 #targetport 
-
-
-
-
-
+    port: 8080 # service port
+    targetPort: 8080 # container port
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cart
+  namespace: roboshop
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cart
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 10
